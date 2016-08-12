@@ -1,0 +1,1 @@
+`docker run --privileged -p 8080:8080 -p 9090:9090 chadmoon/kubeception`
