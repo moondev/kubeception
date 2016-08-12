@@ -7,7 +7,7 @@ networks:
 services:
   etcd:
     image: gcr.io/google_containers/etcd:2.2.1
-    command: ['/usr/local/bin/etcd', '--listen-client-urls=http://0.0.0.0:4001', '--advertise-client-urls=http://0.0.0.0:4001', '--bind-addr=0.0.0.0:4001', '--data-dir=/var/etcd/data']
+    command: ['/usr/local/bin/etcd', '--bind-addr=0.0.0.0:4001', '--data-dir=/var/etcd/data']
     ports:
      - "4001:4001"
     networks:
@@ -16,18 +16,17 @@ services:
         - etcd-alias
 
   apiserver:
-    image: gcr.io/google_containers/hyperkube:v1.2.0
-    command: ["/hyperkube", "apiserver", "--service-cluster-ip-range=10.0.0.1/24", "--address=0.0.0.0", "--insecure-bind-address=0.0.0.0", "--etcd_servers=http://etcd-alias:4001", "--cluster_name=kubernetes", "--allow-privileged=true"]
+    image: gcr.io/google_containers/hyperkube:v1.0.1
+    command: ["/hyperkube", "apiserver", "--service-cluster-ip-range=172.17.17.1/24", "--address=0.0.0.0", "--etcd_servers=http://etcd-alias:4001", "--cluster_name=kubernetes", "--v=2"]
     ports:
      - "8080:8080"
-    privileged: true
     networks:
      internal:
        aliases:
         - apiserver-alias
 
   controller:
-    image:  gcr.io/google_containers/hyperkube:v1.2.0
+    image:  gcr.io/google_containers/hyperkube:v1.0.1
     command: ["/hyperkube", "controller-manager", "--master=http://apiserver-alias:8080", "--v=2"]
     networks:
      internal:
@@ -35,7 +34,7 @@ services:
         - controller-alias
 
   scheduler:
-    image:  gcr.io/google_containers/hyperkube:v1.2.0
+    image:  gcr.io/google_containers/hyperkube:v1.0.1
     command: ["/hyperkube", "scheduler", "--master=http://apiserver-alias:8080", "--v=2"]
     networks:
      internal:
@@ -43,24 +42,17 @@ services:
         - scheduler-alias
 
   kubelet:
-    image:  gcr.io/google_containers/hyperkube:v1.2.0
-    privileged: true
-    pid: host
+    image:  gcr.io/google_containers/hyperkube:v1.0.1
     volumes:
         - /var/run/docker.sock:/var/run/docker.sock
-        - /var/lib/kubelet/:/var/lib/kubelet
-        - /var/lib/docker/:/var/lib/docker:rw
-        - /var/run:/var/run:rw
-        - /sys:/sys:ro
-        - /:/rootfs:ro
-    command: ['/hyperkube', 'kubelet', '--api_servers=http://apiserver-alias:8080', '--v=2', '--address=0.0.0.0', '--enable_server', '--containerized']
+    command: ['/hyperkube', 'kubelet', '--api_servers=http://apiserver-alias:8080', '--v=2', '--address=0.0.0.0', '--enable_server']
     networks:
      internal:
        aliases:
         - kubelet-alias
 
   proxy:
-    image:  gcr.io/google_containers/hyperkube:v1.2.0
+    image:  gcr.io/google_containers/hyperkube:v1.0.1
     privileged: true
     command: ['/hyperkube', 'proxy', '--master=http://apiserver-alias:8080', '--v=2']
     networks:
